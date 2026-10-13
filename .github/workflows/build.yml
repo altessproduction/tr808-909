@@ -1,0 +1,52 @@
+name: Build VST3 + Standalone
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows VST3 + Standalone
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show CMake version
+        run: cmake --version
+
+      - name: Clone JUCE framework
+        run: |
+          git clone --depth 1 --branch master https://github.com/juce-framework/JUCE.git extern/JUCE
+        shell: bash
+
+      - name: Configure CMake (Visual Studio 2022, x64)
+        run: cmake -B Build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build VST3 and Standalone (Release)
+        run: cmake --build Build --config Release --target TR808_909_VST3 TR808_909_Standalone --parallel 4
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          mkdir -p artifacts/vst3 artifacts/standalone
+          cp -r "Build/TR808_909_artefacts/Release/VST3/TR808_909.vst3" artifacts/vst3/
+          cp "Build/TR808_909_artefacts/Release/Standalone/TR808_909_Standalone.exe" artifacts/standalone/
+
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TR808_909_VST3_Windows
+          path: artifacts/vst3/TR808_909.vst3
+          retention-days: 30
+
+      - name: Upload Standalone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TR808_909_Standalone_Windows
+          path: artifacts/standalone/TR808_909_Standalone.exe
+          retention-days: 30
